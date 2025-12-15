@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="web.example.app.city.mapper.MapperCity">
+    
+    <select id="getCity" resultType="web.example.app.domain.model.City">
+        SELECT *
+        FROM city
+        WHERE ID = #{id}
+    </select>
+    
+    <select id="selectCityList" resultType="web.example.app.domain.model.City">
+        SELECT ID
+       		, Name
+       		, CountryCode
+       		, District
+       		, Population
+        FROM city
+        <where>
+            <if test="name != null and name != ''">
+                name=#{name}
+            </if>
+            <if test="id != null and id != ''">
+                id=#{id}
+            </if>
+            <if test="countryCode != null and countryCode != ''">
+                countryCode=#{countryCode}
+            </if>
+            <if test="district != null and district != ''">
+                district=#{district}
+            </if>
+            <if test="population != null and population != ''">
+                population=#{population}
+            </if>
+        </where>
+    </select>
+    
+    <select id="doSearch" resultType="web.example.app.domain.model.Country">
+    	select *
+    	from (
+    		SELECT 
+	    	    Code
+			    , Name
+			    , Continent
+			    , Region
+			    , SurfaceArea
+			    , IndepYear
+			    , Population
+			    , LifeExpectancy
+			    , GNP
+			    , GNPOld
+			    , LocalName
+			    , GovernmentForm
+			    , HeadOfState
+			    , Capital
+			    , Code2 
+	    	FROM country
+            
+    	) a
+    	<where>
+    	<if test='continent != null and continent != ""'>
+	    	Continent=#{continent}
+    	</if>
+    	
+    	</where>
+    </select>
+    
+</mapper>

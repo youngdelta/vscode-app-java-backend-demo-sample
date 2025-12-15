@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Virtual Scroll Table (Vanilla JS) =정상작동안됨</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+
+      .container {
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        height: 44px;
+      }
+
+      thead th {
+        position: sticky;
+        top: 0;
+        background: #fafafa;
+        z-index: 1;
+      }
+
+      .skeleton {
+        background: #eee;
+        position: relative;
+        overflow: hidden;
+      }
+      .skeleton::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -150px;
+        width: 150px;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.6),
+          transparent
+        );
+        animation: shimmer 1.2s infinite;
+      }
+      @keyframes shimmer {
+        100% {
+          transform: translateX(300%);
+        }
+      }
+
+      .select-col {
+        width: 40px;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Virtual Scroll (대용량 대응)</h1>
+
+    <div class="container" id="scrollContainer">
+      <table>
+        <thead>
+          <tr>
+            <th class="select-col">
+              <input type="checkbox" id="selectAll" />
+            </th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="topSpacer"></tbody>
+        <tbody id="tbody"></tbody>
+        <tbody id="bottomSpacer"></tbody>
+      </table>
+    </div>
+
+    <!-- ================= Handlebars ================= -->
+    <script id="row-template" type="text/x-handlebars-template">
+      {{#each list}}
+      <tr data-id="{{id}}">
+        <td class="select-col">
+          <input type="checkbox" class="row-check" {{#if selected}}checked{{/if}}>
+        </td>
+        <td>{{id}}</td>
+        <td>{{upper name}}</td>
+        <td>{{maskEmail email}}</td>
+        <td>{{formatDate createdAt}}</td>
+      </tr>
+      {{/each}}
+    </script>
+
+    <script>
+      /* ================= Helpers ================= */
+      Handlebars.registerHelper("upper", (v) => String(v).toUpperCase());
+      Handlebars.registerHelper("maskEmail", (e) =>
+        e ? e.slice(0, 2) + "***@" + e.split("@")[1] : ""
+      );
+      Handlebars.registerHelper("formatDate", (d) =>
+        d ? new Date(d).toISOString().slice(0, 10) : ""
+      );
+
+      /* ================= Config ================= */
+      const ROW_HEIGHT = 44;
+      const BUFFER = 5;
+      const PAGE_SIZE = 50;
+
+      /* ================= State ================= */
+      let allData = [];
+      let pageNum = 1;
+      let totalPages = Infinity;
+      let loading = false;
+      const selectedIds = new Set();
+
+      /* ================= Compile ================= */
+      const rowTpl = Handlebars.compile(
+        document.getElementById("row-template").innerHTML
+      );
+
+      /* ================= Fetch ================= */
+      async function fetchPage() {
+        if (loading || pageNum > totalPages) return;
+        loading = true;
+
+        const res = await fetch(
+          `/users/ajax?pageNum=${pageNum}&pageSize=${PAGE_SIZE}`
+        );
+        const data = await res.json();
+
+        allData.push(...data.argPage.list);
+        totalPages = data.argPage.pages;
+        pageNum++;
+        loading = false;
+
+        render();
+      }
+
+      /* ================= Virtual Render ================= */
+      const container = document.getElementById("scrollContainer");
+      const tbody = document.getElementById("tbody");
+      const topSpacer = document.getElementById("topSpacer");
+      const bottomSpacer = document.getElementById("bottomSpacer");
+
+      function render() {
+        const scrollTop = container.scrollTop;
+        const viewHeight = container.clientHeight;
+
+        const startIndex = Math.max(
+          Math.floor(scrollTop / ROW_HEIGHT) - BUFFER,
+          0
+        );
+        const visibleCount = Math.ceil(viewHeight / ROW_HEIGHT) + BUFFER * 2;
+        const endIndex = Math.min(startIndex + visibleCount, allData.length);
+
+        const visibleData = allData
+          .slice(startIndex, endIndex)
+          .map((d) => ({ ...d, selected: selectedIds.has(String(d.id)) }));
+
+        topSpacer.innerHTML = `<tr style="height:${
+          startIndex * ROW_HEIGHT
+        }px"></tr>`;
+        bottomSpacer.innerHTML = `<tr style="height:${
+          (allData.length - endIndex) * ROW_HEIGHT
+        }px"></tr>`;
+
+        tbody.innerHTML = rowTpl({ list: visibleData });
+
+        // 다음 페이지 미리 로딩
+        if (endIndex > allData.length - PAGE_SIZE / 2) {
+          fetchPage();
+        }
+      }
+
+      /* ================= Selection ================= */
+      container.addEventListener("change", (e) => {
+        if (!e.target.classList.contains("row-check")) return;
+        const id = e.target.closest("tr").dataset.id;
+        e.target.checked ? selectedIds.add(id) : selectedIds.delete(id);
+      });
+
+      /* ================= Scroll ================= */
+      container.addEventListener("scroll", render);
+
+      /* ================= Init ================= */
+      fetchPage();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Paging Demo (Pure Vanilla JS)</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 25px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .controls {
+        margin-bottom: 15px;
+      }
+      button,
+      select {
+        padding: 5px 10px;
+      }
+      .loading {
+        display: none;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .tables {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      @media (max-width: 900px) {
+        .tables {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>PageHelper / RowBounds Paging Demo</h1>
+
+    <div class="loading" id="loading">Loading...</div>
+
+    <div class="controls">
+      Page:
+      <select id="pageNum"></select>
+
+      Page Size:
+      <select id="pageSize">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="20">20</option>
+      </select>
+
+      <button id="goBtn">Go</button>
+      <button id="prevBtn">Prev</button>
+      <button id="nextBtn">Next</button>
+
+      <span style="margin-left: 15px">
+        Page <strong id="currentPage">1</strong> /
+        <strong id="totalPages">1</strong>
+      </span>
+    </div>
+
+    <div class="tables">
+      <table id="argTable">
+        <caption>
+          ArgumentResolver PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <table id="aopTable">
+        <caption>
+          AOP PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <table id="rowTable">
+        <caption>
+          RowBounds
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script>
+      /* ======================
+   fetch 공통 (AbortController)
+====================== */
+      let currentController = null;
+
+      async function apiGet(url) {
+        if (currentController) currentController.abort();
+        currentController = new AbortController();
+
+        try {
+          const res = await fetch(url, { signal: currentController.signal });
+          if (!res.ok) throw new Error("HTTP Error");
+          return await res.json();
+        } catch (e) {
+          if (e.name === "AbortError") return null;
+          alert("데이터 로딩 실패");
+          console.error(e);
+        }
+      }
+
+      /* ======================
+   Template Literal Renderer
+====================== */
+      function renderRows(list) {
+        return list
+          .map(
+            (row) => `
+    <tr>
+      <td>${row.id}</td>
+      <td>${row.name}</td>
+      <td>${row.email}</td>
+    </tr>
+  `
+          )
+          .join("");
+      }
+
+      /* ======================
+   메인 로직
+====================== */
+      const qs = (s) => document.querySelector(s);
+
+      async function loadPage(pageNum, pageSize) {
+        qs("#loading").style.display = "block";
+
+        const data = await apiGet(
+          `/users/ajax?pageNum=${pageNum}&pageSize=${pageSize}`
+        );
+        if (!data) return;
+
+        qs("#aopTable tbody").innerHTML = renderRows(data.aopPage.list);
+        qs("#argTable tbody").innerHTML = renderRows(data.argPage.list);
+        qs("#rowTable tbody").innerHTML = renderRows(data.rowBoundsMap.list);
+
+        qs("#currentPage").textContent = data.pageNum;
+        qs("#totalPages").textContent = data.totalPages;
+
+        qs("#pageNum").innerHTML = Array.from(
+          { length: data.totalPages },
+          (_, i) =>
+            `<option value="${i + 1}" ${
+              i + 1 === data.pageNum ? "selected" : ""
+            }>
+        ${i + 1}
+       </option>`
+        ).join("");
+
+        qs("#loading").style.display = "none";
+      }
+
+      /* ======================
+   이벤트 바인딩
+====================== */
+      qs("#goBtn").onclick = () =>
+        loadPage(qs("#pageNum").value, qs("#pageSize").value);
+
+      qs("#prevBtn").onclick = () =>
+        loadPage(
+          Math.max(1, +qs("#currentPage").textContent - 1),
+          qs("#pageSize").value
+        );
+
+      qs("#nextBtn").onclick = () =>
+        loadPage(+qs("#currentPage").textContent + 1, qs("#pageSize").value);
+
+      /* ======================
+   초기 로드
+====================== */
+      loadPage(1, 5);
+    </script>
+  </body>
+</html>

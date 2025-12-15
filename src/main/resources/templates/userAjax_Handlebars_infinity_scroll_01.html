@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vanilla JS + Handlebars + Infinite Scroll</title>
+
+    <!-- Handlebars -->
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .loading {
+        text-align: center;
+        font-weight: bold;
+        padding: 15px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>User List (Infinite Scroll)</h1>
+
+    <table>
+      <caption>
+        Users
+      </caption>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <table id="aopTable">
+      <caption>
+        AOP PageHelper
+      </caption>
+      <thead>
+        <tr>
+          <th data-key="id">ID</th>
+          <th data-key="name">Name</th>
+          <th data-key="email">Email</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">Total: <span class="total"></span></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <table id="argTable">
+      <caption>
+        ArgumentResolver + PageHelper
+      </caption>
+      <thead>
+        <tr>
+          <th data-key="id">ID</th>
+          <th data-key="name">Name</th>
+          <th data-key="email">Email</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">Total: <span class="total"></span></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div id="sentinel" class="loading">Loading...</div>
+
+    <!-- ==========================
+     Handlebars Template
+========================== -->
+    <script id="row-template" type="text/x-handlebars-template">
+      {{#each list}}
+        <tr>
+          <td>{{id}}</td>
+          <td>{{upper name}}</td>
+          <td>{{emailMask email}}</td>
+          <td>{{formatDate createdAt}}</td>
+        </tr>
+      {{/each}}
+    </script>
+
+    <script>
+      const qs = (s) => document.querySelector(s);
+
+      /* ==========================
+   Handlebars Helpers
+========================== */
+      Handlebars.registerHelper("upper", (v) => String(v ?? "").toUpperCase());
+
+      Handlebars.registerHelper("emailMask", (email) => {
+        if (!email) return "";
+        const [id, domain] = email.split("@");
+        return id.slice(0, 2) + "***@" + domain;
+      });
+
+      Handlebars.registerHelper("formatDate", (date) => {
+        if (!date) return "";
+        const d = new Date(date);
+        return d.toISOString().split("T")[0];
+      });
+
+      /* ==========================
+   상태
+========================== */
+      let pageNum = 1;
+      const pageSize = 10;
+      let totalPages = Infinity;
+      let loading = false;
+      const renderedIds = new Set();
+
+      /* ==========================
+   Handlebars Compile
+========================== */
+      const rowTemplate = Handlebars.compile(
+        document.getElementById("row-template").innerHTML
+      );
+
+      /* ==========================
+   fetch (AbortController)
+========================== */
+      let controller = null;
+
+      async function fetchUsers() {
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        const res = await fetch(
+          `/users/ajax?pageNum=${pageNum}&pageSize=${pageSize}`,
+          { signal: controller.signal }
+        );
+        return res.json();
+      }
+
+      /* ==========================
+   DOM diff + append
+========================== */
+      function appendRows(list) {
+        const tbody = document.getElementById("tbody");
+        const aopTbody = qs("#aopTable tbody");
+        const argTbody = qs("#argTable tbody");
+        const rowTbody = qs("#rowTable tbody");
+
+        const filtered = list.filter((u) => !renderedIds.has(u.id));
+        filtered.forEach((u) => renderedIds.add(u.id));
+
+        if (filtered.length === 0) return;
+
+        tbody.insertAdjacentHTML("beforeend", rowTemplate({ list: filtered }));
+        aopTbody.insertAdjacentHTML(
+          "beforeend",
+          rowTemplate({ list: filtered })
+        );
+        argTbody.insertAdjacentHTML(
+          "beforeend",
+          rowTemplate({ list: filtered })
+        );
+        rowTbody.insertAdjacentHTML(
+          "beforeend",
+          rowTemplate({ list: filtered })
+        );
+      }
+
+      /* ==========================
+   Infinite Scroll Loader
+========================== */
+      async function loadNext() {
+        if (loading || pageNum > totalPages) return;
+        loading = true;
+
+        const data = await fetchUsers();
+        const page = data.argPage ?? data;
+
+        appendRows(page.list);
+
+        totalPages = page.pages ?? page.totalPages;
+        pageNum++;
+        loading = false;
+
+        if (pageNum > totalPages) {
+          document.getElementById("sentinel").textContent =
+            "모든 데이터를 불러왔습니다.";
+          observer.disconnect();
+        }
+      }
+
+      /* ==========================
+   IntersectionObserver
+========================== */
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) loadNext();
+        },
+        { threshold: 0.1 }
+      );
+
+      observer.observe(document.getElementById("sentinel"));
+
+      /* 초기 로드 */
+      loadNext();
+    </script>
+  </body>
+</html>

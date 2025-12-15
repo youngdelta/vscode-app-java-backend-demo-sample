@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vanilla JS + Handlebars + Infinite Scroll</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .loading {
+        text-align: center;
+        font-weight: bold;
+        padding: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Vanilla JS + Handlebars Infinite Scroll</h1>
+
+    <table>
+      <caption>
+        User List
+      </caption>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <div id="sentinel" class="loading">Loading...</div>
+
+    <!-- ==========================
+     Handlebars Template
+========================== -->
+    <script id="row-template" type="text/x-handlebars-template">
+      {{#each list}}
+        <tr>
+          <td>{{id}}</td>
+          <td>{{name}}</td>
+          <td>{{email}}</td>
+        </tr>
+      {{/each}}
+    </script>
+
+    <script>
+      /* ======================
+   상태
+====================== */
+      let pageNum = 1;
+      const pageSize = 5;
+      let totalPages = Infinity;
+      let loading = false;
+
+      const renderedIds = new Set();
+
+      /* ======================
+   Handlebars
+====================== */
+      const rowTpl = Handlebars.compile(
+        document.getElementById("row-template").innerHTML
+      );
+
+      /* ======================
+   fetch (AbortController)
+====================== */
+      let controller = null;
+
+      async function apiGet() {
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        const url = `/users/ajax?pageNum=${pageNum}&pageSize=${pageSize}`;
+        const res = await fetch(url, { signal: controller.signal });
+        return res.json();
+      }
+
+      /* ======================
+   DOM diff + append
+====================== */
+      function appendRows(list) {
+        const tbody = document.getElementById("tbody");
+
+        const filtered = list.filter((u) => !renderedIds.has(u.id));
+        filtered.forEach((u) => renderedIds.add(u.id));
+
+        if (filtered.length === 0) return;
+
+        tbody.insertAdjacentHTML("beforeend", rowTpl({ list: filtered }));
+      }
+
+      /* ======================
+   Infinite Scroll
+====================== */
+      async function loadNext() {
+        if (loading || pageNum > totalPages) return;
+        loading = true;
+
+        const data = await apiGet();
+        const page = data.page ?? data;
+
+        appendRows(page.list);
+
+        totalPages = page.pages ?? page.totalPages;
+        pageNum++;
+        loading = false;
+
+        if (pageNum > totalPages) {
+          document.getElementById("sentinel").textContent =
+            "모든 데이터를 불러왔습니다.";
+          observer.disconnect();
+        }
+      }
+
+      /* ======================
+   IntersectionObserver
+====================== */
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) loadNext();
+        },
+        { threshold: 0.1 }
+      );
+
+      observer.observe(document.getElementById("sentinel"));
+
+      /* 초기 로드 */
+      loadNext();
+    </script>
+  </body>
+</html>

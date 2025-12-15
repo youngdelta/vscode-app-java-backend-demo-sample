@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Infinite Scroll Paging (Handlebars)</title>
+
+    <!-- Handlebars -->
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .loading {
+        font-weight: bold;
+        text-align: center;
+        margin: 20px 0;
+      }
+      .tables {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      @media (max-width: 900px) {
+        .tables {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Infinite Scroll Paging (PageHelper / RowBounds)</h1>
+
+    <div class="tables">
+      <table id="argTable">
+        <caption>
+          ArgumentResolver PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <table id="aopTable">
+        <caption>
+          AOP PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <table id="rowTable">
+        <caption>
+          RowBounds
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="sentinel" class="loading">Loading...</div>
+
+    <!-- ==========================
+     Handlebars Template
+========================== -->
+    <script id="row-template" type="text/x-handlebars-template">
+      {{#each list}}
+        <tr>
+          <td>{{id}}</td>
+          <td>{{name}}</td>
+          <td>{{email}}</td>
+        </tr>
+      {{/each}}
+    </script>
+
+    <script>
+      /* ======================
+   Handlebars compile
+====================== */
+      const rowTemplate = Handlebars.compile(
+        document.getElementById("row-template").innerHTML
+      );
+
+      /* ======================
+   fetch 공통 (AbortController)
+====================== */
+      let currentController = null;
+
+      async function apiGet(url) {
+        if (currentController) currentController.abort();
+        currentController = new AbortController();
+
+        try {
+          const res = await fetch(url, { signal: currentController.signal });
+          if (!res.ok) throw new Error("HTTP Error");
+          return await res.json();
+        } catch (e) {
+          if (e.name === "AbortError") return null;
+          console.error(e);
+        }
+      }
+
+      /* ======================
+   DOM diff (중복 방지)
+====================== */
+      const renderedIds = {
+        aop: new Set(),
+        arg: new Set(),
+        row: new Set(),
+      };
+
+      function diffAppend(tbody, list, cacheSet) {
+        const filtered = list.filter((r) => !cacheSet.has(r.id));
+        filtered.forEach((r) => cacheSet.add(r.id));
+
+        if (filtered.length === 0) return;
+
+        tbody.insertAdjacentHTML("beforeend", rowTemplate({ list: filtered }));
+      }
+
+      /* ======================
+   Infinite Scroll 상태
+====================== */
+      let pageNum = 1;
+      const pageSize = 5;
+      let totalPages = Infinity;
+      let isLoading = false;
+
+      const qs = (s) => document.querySelector(s);
+
+      /* ======================
+   데이터 로드
+====================== */
+      async function loadNextPage() {
+        if (isLoading || pageNum > totalPages) return;
+        isLoading = true;
+
+        const data = await apiGet(
+          `/users/ajax?pageNum=${pageNum}&pageSize=${pageSize}`
+        );
+        if (!data) return;
+
+        diffAppend(qs("#aopTable tbody"), data.aopPage.list, renderedIds.aop);
+        diffAppend(qs("#argTable tbody"), data.argPage.list, renderedIds.arg);
+        diffAppend(
+          qs("#rowTable tbody"),
+          data.rowBoundsMap.list,
+          renderedIds.row
+        );
+
+        totalPages = data.totalPages;
+        pageNum++;
+        isLoading = false;
+
+        if (pageNum > totalPages) {
+          qs("#sentinel").textContent = "모든 데이터를 불러왔습니다.";
+          observer.disconnect();
+        }
+      }
+
+      /* ======================
+   IntersectionObserver
+====================== */
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) loadNextPage();
+        },
+        { threshold: 0.1 }
+      );
+
+      observer.observe(qs("#sentinel"));
+
+      /* 초기 로드 */
+      loadNextPage();
+    </script>
+  </body>
+</html>

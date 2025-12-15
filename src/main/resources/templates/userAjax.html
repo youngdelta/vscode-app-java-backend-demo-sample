@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>App.js Only Example</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      thead th {
+        background: #f7f7f7;
+        position: sticky;
+        top: 0;
+      }
+      .loading {
+        text-align: center;
+        padding: 12px;
+        font-weight: bold;
+      }
+      .container {
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Users (App.js Only)</h1>
+
+    <div class="container" id="scrollBox">
+      <table>
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" id="selectAll" />
+            </th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="loading" class="loading">Loading...</div>
+    </div>
+
+    <button onclick="printSelected()">선택된 ID 확인</button>
+
+    <script>
+      /* =====================================================
+        App.js (Adapter 기반 단독 상태 관리)
+        ❗ 실제 App.js API로 교체 가능
+      ===================================================== */
+      const App = {
+        createStore(initialState) {
+          let state = structuredClone(initialState);
+          const subs = [];
+
+          return {
+            get() {
+              return state;
+            },
+            set(updater) {
+              state = updater(state);
+              subs.forEach((fn) => fn(state));
+            },
+            subscribe(fn) {
+              subs.push(fn);
+            },
+          };
+        },
+      };
+
+      /* =====================================================
+        Store 정의
+      ===================================================== */
+      const store = App.createStore({
+        page: 1,
+        pageSize: 10,
+        loading: false,
+        finished: false,
+        users: [],
+        selectedIds: new Set(),
+      });
+
+      /* =====================================================
+        API
+      ===================================================== */
+      async function fetchUsers(page, pageSize) {
+        const res = await fetch(
+          `/users/ajax?pageNum=${page}&pageSize=${pageSize}`
+        );
+        return res.json();
+      }
+
+      /* =====================================================
+        Actions
+      ===================================================== */
+      async function loadNextPage() {
+        const { page, pageSize, loading, finished } = store.get();
+        if (loading || finished) return;
+
+        store.set((s) => ({ ...s, loading: true }));
+
+        const data = await fetchUsers(page, pageSize);
+
+        store.set((s) => ({
+          ...s,
+          users: [...s.users, ...data.argPage.list],
+          page: s.page + 1,
+          loading: false,
+          finished: s.page >= data.argPage.pages,
+        }));
+      }
+
+      /* =====================================================
+          Render
+        ===================================================== */
+      const tbody = document.getElementById("tbody");
+      const loadingEl = document.getElementById("loading");
+
+      function render(state) {
+        tbody.innerHTML = state.users
+          .map(
+            (u) => `
+    <tr>
+      <td>
+        <input type="checkbox"
+               class="row-check"
+               data-id="${u.id}"
+               ${state.selectedIds.has(String(u.id)) ? "checked" : ""}>
+      </td>
+      <td>${u.id}</td>
+      <td>${u.name}</td>
+      <td>${u.email}</td>
+    </tr>
+  `
+          )
+          .join("");
+
+        loadingEl.style.display =
+          state.loading || !state.finished ? "block" : "none";
+      }
+
+      store.subscribe(render);
+
+      /* =====================================================
+   Events
+===================================================== */
+      document.addEventListener("change", (e) => {
+        if (e.target.classList.contains("row-check")) {
+          const id = String(e.target.dataset.id);
+          const checked = e.target.checked;
+
+          store.set((s) => {
+            const next = new Set(s.selectedIds);
+            checked ? next.add(id) : next.delete(id);
+            return { ...s, selectedIds: next };
+          });
+        }
+
+        if (e.target.id === "selectAll") {
+          const checked = e.target.checked;
+          document.querySelectorAll(".row-check").forEach((cb) => {
+            cb.checked = checked;
+            cb.dispatchEvent(new Event("change"));
+          });
+        }
+      });
+
+      /* =====================================================
+   Infinite Scroll
+===================================================== */
+      const box = document.getElementById("scrollBox");
+
+      box.addEventListener("scroll", () => {
+        if (box.scrollTop + box.clientHeight >= box.scrollHeight - 50) {
+          loadNextPage();
+        }
+      });
+
+      /* =====================================================
+   Debug
+===================================================== */
+      function printSelected() {
+        console.log([...store.get().selectedIds]);
+      }
+
+      /* =====================================================
+   Init
+===================================================== */
+      loadNextPage();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <!-- <link rel="stylesheet" href="{/css/app.css}" /> -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>User Management</h1>
+      </div>
+
+      <!-- 검색 -->
+      <div class="search-container">
+        <form action="" method="get" class="search-form">
+          <div class="input-group">
+            <select name="keyword" id="keyword" class="form-select">
+              <option value="name" th:selected="${search.keyword == 'name'}">
+                Name
+              </option>
+              <option value="email" th:selected="${search.keyword == 'email'}">
+                Email
+              </option>
+            </select>
+            <input
+              type="text"
+              id="search"
+              name="search"
+              class="form-input"
+              placeholder="Search..."
+              th:value="${search.search}"
+            />
+            <button type="submit" class="btn btn-primary">Search</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 리스트 테이블 -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="user : ${users.getList()}">
+              <td th:text="${user.getName()}"></td>
+              <td th:text="${user.getEmail()}"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 페이징 -->
+      <nav class="pagination-container">
+        <ul class="pagination">
+          <!-- getPrePage : 이전 페이지 -->
+          <li
+            th:classappend="${users.getPrePage() == 0} ? 'disabled'"
+            class="page-item"
+          >
+            <a
+              class="page-link"
+              th:href="@{/page(pageNum=${users.getPrePage()}, keyword=${search.getKeyword()}, search=${search.getSearch()})}"
+              >Previous</a
+            >
+          </li>
+
+          <li
+            th:each="page: ${#numbers.sequence(users.getNavigateFirstPage(), users.getNavigateLastPage())}"
+            th:classappend="${page == users.getPageNum()} ? 'active'"
+            class="page-item"
+          >
+            <a
+              class="page-link"
+              th:text="${page}"
+              th:href="@{/page(pageNum=${page}, keyword=${search.getKeyword()}, search=${search.getSearch()})}"
+            ></a>
+          </li>
+
+          <!-- getPrePage : 다음 페이지 -->
+          <li
+            th:classappend="${users.getNextPage() == 0} ? 'disabled'"
+            class="page-item"
+          >
+            <a
+              class="page-link"
+              th:href="@{/page(pageNum=${users.getNextPage()}, keyword=${search.getKeyword()}, search=${search.getSearch()})}"
+              >Next</a
+            >
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </body>
+</html>

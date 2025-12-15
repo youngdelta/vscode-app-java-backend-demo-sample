@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Infinite Scroll Paging (Alpine.js)</title>
+
+    <!-- Alpine.js -->
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .loading {
+        font-weight: bold;
+        text-align: center;
+        margin: 20px 0;
+      }
+      .tables {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      @media (max-width: 900px) {
+        .tables {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body x-data="userPaging()" x-init="init()">
+    <h1>Infinite Scroll Paging (PageHelper / RowBounds)</h1>
+
+    <div class="tables">
+      <!-- ArgumentResolver -->
+      <table>
+        <caption>
+          ArgumentResolver PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>SEQ</th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in argList" :key="'arg-' + row.id">
+            <tr>
+              <td x-text="row.seq"></td>
+              <td x-text="row.id"></td>
+              <td x-text="row.name"></td>
+              <td x-text="row.email"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
+      <!-- AOP -->
+      <table>
+        <caption>
+          AOP PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>SEQ</th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in aopList" :key="'aop-' + row.id">
+            <tr>
+              <td x-text="row.seq"></td>
+              <td x-text="row.id"></td>
+              <td x-text="row.name"></td>
+              <td x-text="row.email"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
+      <!-- RowBounds -->
+      <table>
+        <caption>
+          RowBounds
+        </caption>
+        <thead>
+          <tr>
+            <th>SEQ</th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in rowList" :key="'row-' + row.id">
+            <tr>
+              <td x-text="row.seq"></td>
+              <td x-text="row.id"></td>
+              <td x-text="row.name"></td>
+              <td x-text="row.email"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="sentinel" class="loading" x-text="loadingText"></div>
+
+    <script>
+      function userPaging() {
+        return {
+          /* ======================
+       상태
+    ====================== */
+          pageNum: 1,
+          pageSize: 5,
+          totalPages: Infinity,
+          loading: false,
+          controller: null,
+
+          argList: [],
+          aopList: [],
+          rowList: [],
+
+          rendered: {
+            arg: new Set(),
+            aop: new Set(),
+            row: new Set(),
+          },
+
+          loadingText: "Loading...",
+
+          /* ======================
+       초기화
+    ====================== */
+          init() {
+            this.loadNextPage();
+            this.initObserver();
+          },
+
+          /* ======================
+       fetch
+    ====================== */
+          async apiGet() {
+            if (this.controller) this.controller.abort();
+            this.controller = new AbortController();
+
+            const res = await fetch(
+              `/users/ajax?pageNum=${this.pageNum}&pageSize=${this.pageSize}`,
+              { signal: this.controller.signal }
+            );
+            return res.json();
+          },
+
+          /* ======================
+       diff append
+    ====================== */
+          diffPush(targetList, newList, cache) {
+            for (const row of newList) {
+              if (cache.has(row.id)) continue;
+              cache.add(row.id);
+              targetList.push(row);
+            }
+          },
+
+          /* ======================
+       데이터 로드
+    ====================== */
+          async loadNextPage() {
+            if (this.loading || this.pageNum > this.totalPages) return;
+
+            this.loading = true;
+
+            const data = await this.apiGet();
+            if (!data) return;
+
+            this.diffPush(this.aopList, data.aopPage.list, this.rendered.aop);
+            this.diffPush(this.argList, data.argPage.list, this.rendered.arg);
+            this.diffPush(
+              this.rowList,
+              data.rowBoundsMap.list,
+              this.rendered.row
+            );
+
+            this.totalPages = data.totalPages;
+            this.pageNum++;
+            this.loading = false;
+
+            if (this.pageNum > this.totalPages) {
+              this.loadingText = "모든 데이터를 불러왔습니다.";
+              this.observer.disconnect();
+            }
+          },
+
+          /* ======================
+       IntersectionObserver
+    ====================== */
+          initObserver() {
+            const sentinel = document.getElementById("sentinel");
+
+            this.observer = new IntersectionObserver(
+              (entries) => {
+                if (entries[0].isIntersecting) {
+                  this.loadNextPage();
+                }
+              },
+              { threshold: 0.1 }
+            );
+
+            this.observer.observe(sentinel);
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

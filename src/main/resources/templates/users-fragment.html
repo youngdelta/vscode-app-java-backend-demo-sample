@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>htmx Infinite Scroll</title>
+
+    <!-- htmx -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      thead th {
+        position: sticky;
+        top: 0;
+        background: #fafafa;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 15px;
+        font-weight: bold;
+      }
+
+      /* Skeleton / Shimmer */
+      .skeleton {
+        background: #eee;
+        position: relative;
+        overflow: hidden;
+      }
+      .skeleton::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -150px;
+        width: 150px;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.6),
+          transparent
+        );
+        animation: shimmer 1.2s infinite;
+      }
+      @keyframes shimmer {
+        100% {
+          transform: translateX(300%);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Users (htmx Infinite Scroll)</h1>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody id="userBody">
+        <!-- 첫 페이지 -->
+        <tr
+          hx-get="/users/fragment?pageNum=1&pageSize=5"
+          hx-trigger="revealed"
+          hx-swap="afterend"
+          hx-target="this"
+          class="loading"
+        >
+          <td colspan="4">Loading...</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

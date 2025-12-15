@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Country Management</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" />
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Country Management</h1>
+    </div>
+
+    <!-- 검색 (향후 확장을 위해 남겨둠) -->
+    <div class="search-container">
+        <form th:action="@{/countrys-view}" method="get" class="search-form">
+            <!-- 검색 조건 필드는 필요에 따라 추가 -->
+            <div class="input-group">
+                <input type="text" id="search" name="name" class="form-input" placeholder="Search by country name..." th:value="${param.name != null ? param.name[0] : ''}" />
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 리스트 테이블 -->
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th scope="col">Code</th>
+                <th scope="col">Name</th>
+                <th scope="col">Continent</th>
+                <th scope="col">Region</th>
+                <th scope="col">Population</th>
+                <th scope="col">Head of State</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="country : ${countries.getList()}">
+                <td th:text="${country.code}"></td>
+                <td th:text="${country.name}"></td>
+                <td th:text="${country.continent}"></td>
+                <td th:text="${country.region}"></td>
+                <td th:text="${country.population}"></td>
+                <td th:text="${country.headOfState}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 페이징 -->
+    <nav class="pagination-container">
+        <ul class="pagination">
+            <!-- 이전 페이지 -->
+            <li th:classappend="${countries.getPrePage() == 0} ? 'disabled'" class="page-item">
+                <a class="page-link" th:href="@{/countrys-view(pageNum=${countries.getPrePage()}, name=${param.name != null ? param.name[0] : ''})}">Previous</a>
+            </li>
+
+            <!-- 페이지 번호 -->
+            <li th:each="page: ${#numbers.sequence(countries.getNavigateFirstPage(), countries.getNavigateLastPage())}"
+                th:classappend="${page == countries.getPageNum()} ? 'active'"
+                class="page-item">
+                <a class="page-link" th:text="${page}" th:href="@{/countrys-view(pageNum=${page}, name=${param.name != null ? param.name[0] : ''})}"></a>
+            </li>
+
+            <!-- 다음 페이지 -->
+            <li th:classappend="${countries.getNextPage() == 0} ? 'disabled'" class="page-item">
+                <a class="page-link" th:href="@{/countrys-view(pageNum=${countries.getNextPage()}, name=${param.name != null ? param.name[0] : ''})}">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Paging Comparison AJAX + JsRender</title>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsrender@1.0.11/jsrender.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 10px;
+      }
+      .controls {
+        margin-bottom: 20px;
+      }
+      select,
+      button {
+        padding: 5px;
+        margin-right: 10px;
+      }
+      .pager {
+        margin-top: 10px;
+      }
+      .pager a {
+        margin: 0 5px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .tables {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        max-width: 500px;
+        transition: opacity 0.3s ease;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+        cursor: pointer;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .loading {
+        display: none;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      @media (min-width: 768px) {
+        .tables {
+          flex-wrap: nowrap;
+        }
+        table {
+          width: 32%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Paging Comparison AJAX + JsRender</h1>
+
+    <div class="loading" id="loading">Loading...</div>
+
+    <div class="controls">
+      Page:
+      <select id="pageNum"></select>
+      Page Size:
+      <select id="pageSize">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="15">15</option>
+        <option value="20">20</option>
+      </select>
+      <button id="goBtn">Go</button>
+      <div class="pager">
+        <a id="prevBtn">&laquo; Prev</a>
+        <span
+          >Page <span id="currentPage"></span> / <span id="totalPages"></span
+        ></span>
+        <a id="nextBtn">Next &raquo;</a>
+      </div>
+    </div>
+
+    <div class="tables">
+      <table id="aopTable">
+        <caption>
+          AOP PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th data-key="id">ID</th>
+            <th data-key="name">Name</th>
+            <th data-key="email">Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Total: <span class="total"></span></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <table id="argTable">
+        <caption>
+          ArgumentResolver + PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th data-key="id">ID</th>
+            <th data-key="name">Name</th>
+            <th data-key="email">Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Total: <span class="total"></span></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <table id="rowTable">
+        <caption>
+          RowBounds
+        </caption>
+        <thead>
+          <tr>
+            <th data-key="id">ID</th>
+            <th data-key="name">Name</th>
+            <th data-key="email">Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Total: <span class="total"></span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- JsRender Templates -->
+    <script id="tableTemplate" type="text/x-jsrender">
+      {{for list}}
+      <tr>
+          <td>{{:id}}</td>
+          <td>{{:name}}</td>
+          <td>{{:email}}</td>
+      </tr>
+      {{/for}}
+    </script>
+
+    <script>
+      let sortOrder = { aopTable: {}, argTable: {}, rowTable: {} };
+
+      function renderTable(tableId, users, total) {
+        let tmpl = $.templates("#tableTemplate");
+        let html = tmpl.render({ list: users });
+        $(`#${tableId} tbody`).html(html);
+        $(`#${tableId} .total`).text(total);
+      }
+
+      function loadPage(pageNum, pageSize) {
+        $("#loading").show();
+        $(".tables table").css("opacity", 0.5);
+
+        $.get("/users/ajax", { pageNum, pageSize }, function (data) {
+          $("#loading").hide();
+          $(".tables table").css("opacity", 1);
+
+          $("#currentPage").text(data.pageNum);
+          $("#totalPages").text(data.totalPages);
+
+          let prevPage = Math.max(data.pageNum - 1, 1);
+          let nextPage = Math.min(data.pageNum + 1, data.totalPages);
+          $("#prevBtn").data("page", prevPage);
+          $("#nextBtn").data("page", nextPage);
+
+          let pageOptions = "";
+          for (let i = 1; i <= data.totalPages; i++) {
+            pageOptions += `<option value="${i}" ${
+              i == data.pageNum ? "selected" : ""
+            }>${i}</option>`;
+          }
+          $("#pageNum").html(pageOptions);
+          $("#pageSize").val(data.pageSize);
+
+          renderTable("aopTable", data.aopPage.list, data.aopPage.total);
+          renderTable("argTable", data.argPage.list, data.argPage.total);
+          renderTable(
+            "rowTable",
+            data.rowBoundsMap.list,
+            data.rowBoundsMap.total
+          );
+        });
+      }
+
+      // 초기 로드
+      loadPage(1, 5);
+
+      // 이벤트
+      $("#goBtn").click(() =>
+        loadPage($("#pageNum").val(), $("#pageSize").val())
+      );
+      $(document).on("click", "#prevBtn", function () {
+        loadPage($(this).data("page"), $("#pageSize").val());
+      });
+      $(document).on("click", "#nextBtn", function () {
+        loadPage($(this).data("page"), $("#pageSize").val());
+      });
+
+      // 테이블 정렬
+      $("table th").click(function () {
+        let tableId = $(this).closest("table").attr("id");
+        let key = $(this).data("key");
+        let tbody = $(`#${tableId} tbody`);
+        let rows = tbody.find("tr").toArray();
+
+        let order = sortOrder[tableId][key] === "asc" ? "desc" : "asc";
+        sortOrder[tableId][key] = order;
+
+        rows.sort((a, b) => {
+          let valA = $(a)
+            .find(`td:eq(${$(this).index()})`)
+            .text();
+          let valB = $(b)
+            .find(`td:eq(${$(this).index()})`)
+            .text();
+          if (!isNaN(valA) && !isNaN(valB)) {
+            valA = parseInt(valA);
+            valB = parseInt(valB);
+          }
+          return order === "asc"
+            ? valA > valB
+              ? 1
+              : -1
+            : valA < valB
+            ? 1
+            : -1;
+        });
+        tbody.html(rows);
+      });
+    </script>
+  </body>
+</html>

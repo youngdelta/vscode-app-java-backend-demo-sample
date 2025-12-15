@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="web.example.app.city.mapper.UserMapper">
+
+    <select id="selectAllUsers" resultType="web.example.app.domain.model.User">
+        SELECT *
+        FROM user
+    </select>
+
+    <select id="selectPagingAllUsers" resultType="web.example.app.domain.model.User">
+        SELECT *
+        FROM user
+    </select>
+
+
+    <select id="selectAllUsersCount" resultType="int">
+        SELECT COUNT(*)
+        FROM user
+    </select>
+
+</mapper>

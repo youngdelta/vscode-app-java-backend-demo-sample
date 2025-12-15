@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="web.example.app.city.mapper.MybatisPagingTestMapper">
+
+    <select id="getCountrys" resultType="web.example.app.domain.model.Country">
+        select *
+    	from (
+    		SELECT 
+	    	    Code
+			    , Name
+			    , Continent
+			    , Region
+			    , SurfaceArea
+			    , IndepYear
+			    , Population
+			    , LifeExpectancy
+			    , GNP
+			    , GNPOld
+			    , LocalName
+			    , GovernmentForm
+			    , HeadOfState
+			    , Capital
+			    , Code2 
+	    	FROM country
+    	) a
+    	<where>
+            <if test="name != null and name != ''">
+                (name like CONCAT('%', UPPER(#{name}), '%') or name like CONCAT('%', LOWER(#{name}), '%'))
+            </if>
+            
+            <if test='continent != null and continent != ""'>
+                and (Continent like CONCAT('%', UPPER(#{continent}), '%') or Continent like CONCAT('%', LOWER(#{continent}), '%'))
+            </if>
+            
+    	</where>
+    </select>
+
+    <!--  페이징 처리를 위한 쿼리  -->
+    <select id="selectCountryList" resultType="web.example.app.domain.dto.BoardListSearchDTO">
+        SELECT *
+        FROM country
+        <where>
+            <if test='name != null and name != ""'>
+                name like CONCAT('%', UPPER(#{name}), '%') or name like CONCAT('%', LOWER(#{name}), '%')
+            </if>
+            <if test='continent != null and continent != ""'>
+                and (Continent like CONCAT('%', UPPER(#{continent}), '%') or Continent like CONCAT('%', LOWER(#{continent}), '%'))
+            </if>
+        </where>
+    </select>
+
+    <select id="getCountryList" resultType="web.example.app.domain.dto.BoardListSearchDTO">
+        SELECT *
+        FROM country
+        <where>
+            <if test='name != null and name != ""'>
+                name like CONCAT('%', UPPER(#{name}), '%') or name like CONCAT('%', LOWER(#{name}), '%')
+            </if>
+            <if test='continent != null and continent != ""'>
+                and (Continent like CONCAT('%', UPPER(#{continent}), '%') or Continent like CONCAT('%', LOWER(#{continent}), '%'))
+            </if>
+        </where>
+    </select>
+
+</mapper>

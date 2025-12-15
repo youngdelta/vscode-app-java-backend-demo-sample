@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Infinite Scroll Paging (Handlebars + Shimmer + Select)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      /* =====================
+   Shimmer Skeleton
+===================== */
+      .skeleton {
+        position: relative;
+        overflow: hidden;
+        background: #eee;
+      }
+
+      .skeleton::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -150px;
+        width: 150px;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.6),
+          transparent
+        );
+        animation: shimmer 1.2s infinite;
+      }
+
+      @keyframes shimmer {
+        100% {
+          transform: translateX(300%);
+        }
+      }
+
+      .skeleton-row td {
+        height: 20px;
+      }
+
+      /* ===================== */
+      .loading {
+        font-weight: bold;
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .tables {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      @media (max-width: 900px) {
+        .tables {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* =====================
+   Selection
+===================== */
+      .select-col {
+        width: 40px;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Infinite Scroll Paging</h1>
+
+    <div class="tables">
+      <table id="userTable">
+        <caption>
+          Users
+        </caption>
+        <thead>
+          <tr>
+            <th class="select-col">
+              <input type="checkbox" id="selectAll" />
+            </th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="sentinel" class="loading">Loading...</div>
+
+    <button onclick="logSelected()">선택 ID 확인</button>
+
+    <!-- ==========================
+     Handlebars Templates
+========================== -->
+    <script id="row-template" type="text/x-handlebars-template">
+      {{#each list}}
+        <tr data-id="{{id}}">
+          <td class="select-col">
+            <input type="checkbox" class="row-check" />
+          </td>
+          <td>{{id}}</td>
+          <td>{{upper name}}</td>
+          <td>{{maskEmail email}}</td>
+          <td>{{formatDate createdAt}}</td>
+        </tr>
+      {{/each}}
+    </script>
+
+    <script id="skeleton-template" type="text/x-handlebars-template">
+      {{#each rows}}
+        <tr class="skeleton-row">
+          <td class="skeleton"></td>
+          <td class="skeleton"></td>
+          <td class="skeleton"></td>
+          <td class="skeleton"></td>
+          <td class="skeleton"></td>
+        </tr>
+      {{/each}}
+    </script>
+
+    <script>
+      /* ======================
+   Handlebars Helpers
+====================== */
+      Handlebars.registerHelper("upper", (v) => String(v ?? "").toUpperCase());
+
+      Handlebars.registerHelper("maskEmail", (email) => {
+        if (!email) return "";
+        const [id, domain] = email.split("@");
+        return id.slice(0, 2) + "***@" + domain;
+      });
+
+      Handlebars.registerHelper("formatDate", (date) => {
+        if (!date) return "";
+        return new Date(date).toISOString().slice(0, 10);
+      });
+
+      /* ======================
+   Compile
+====================== */
+      const rowTemplate = Handlebars.compile(
+        document.getElementById("row-template").innerHTML
+      );
+      const skeletonTemplate = Handlebars.compile(
+        document.getElementById("skeleton-template").innerHTML
+      );
+
+      /* ======================
+   fetch
+====================== */
+      let controller = null;
+
+      async function apiGet() {
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        const res = await fetch(
+          `/users/ajax?pageNum=${pageNum}&pageSize=${pageSize}`,
+          { signal: controller.signal }
+        );
+        return res.json();
+      }
+
+      /* ======================
+   Selection State
+====================== */
+      const selectedIds = new Set();
+
+      document.getElementById("selectAll").addEventListener("change", (e) => {
+        document.querySelectorAll(".row-check").forEach((cb) => {
+          cb.checked = e.target.checked;
+          cb.closest("tr")?.dataset?.id &&
+            (e.target.checked
+              ? selectedIds.add(cb.closest("tr").dataset.id)
+              : selectedIds.clear());
+        });
+      });
+
+      document.addEventListener("change", (e) => {
+        if (!e.target.classList.contains("row-check")) return;
+        const id = e.target.closest("tr").dataset.id;
+        e.target.checked ? selectedIds.add(id) : selectedIds.delete(id);
+      });
+
+      function logSelected() {
+        console.log([...selectedIds]);
+      }
+
+      /* ======================
+   Skeleton
+====================== */
+      function showSkeleton() {
+        document
+          .querySelector("tbody")
+          .insertAdjacentHTML(
+            "beforeend",
+            skeletonTemplate({ rows: Array(3) })
+          );
+      }
+
+      function removeSkeleton() {
+        document.querySelectorAll(".skeleton-row").forEach((r) => r.remove());
+      }
+
+      /* ======================
+   Infinite Scroll
+====================== */
+      let pageNum = 1;
+      const pageSize = 10;
+      let totalPages = Infinity;
+      let loading = false;
+      const rendered = new Set();
+
+      async function loadNext() {
+        if (loading || pageNum > totalPages) return;
+        loading = true;
+
+        showSkeleton();
+
+        const data = await apiGet();
+        removeSkeleton();
+
+        const filtered = data.argPage.list.filter((u) => !rendered.has(u.id));
+        filtered.forEach((u) => rendered.add(u.id));
+
+        document
+          .querySelector("tbody")
+          .insertAdjacentHTML("beforeend", rowTemplate({ list: filtered }));
+
+        totalPages = data.pages;
+        pageNum++;
+        loading = false;
+
+        if (pageNum > totalPages) {
+          document.getElementById("sentinel").textContent =
+            "모든 데이터를 불러왔습니다.";
+          observer.disconnect();
+        }
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) loadNext();
+        },
+        { threshold: 0.1 }
+      );
+
+      observer.observe(document.getElementById("sentinel"));
+
+      loadNext();
+    </script>
+  </body>
+</html>

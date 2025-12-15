@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Paging Comparison</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 10px;
+      }
+      .controls {
+        margin-bottom: 20px;
+      }
+      select,
+      button {
+        padding: 5px;
+        margin-right: 10px;
+      }
+      .pager {
+        margin-top: 10px;
+      }
+      .pager a {
+        margin: 0 5px;
+        text-decoration: none;
+      }
+      .tables {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        max-width: 500px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      @media (min-width: 768px) {
+        .tables {
+          flex-wrap: nowrap;
+        }
+        table {
+          width: 32%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      Paging Comparison (PageNum: <span th:text="${pageNum}"></span>, PageSize:
+      <span th:text="${pageSize}"></span>)
+    </h1>
+
+    <!-- 페이지 선택 & 사이즈 변경 -->
+    <div class="controls">
+      <form method="get" th:action="@{/users/view}">
+        Page:
+        <select name="pageNum">
+          <option
+            th:each="i : ${#numbers.sequence(1, totalPages)}"
+            th:value="${i}"
+            th:text="${i}"
+            th:selected="${i == pageNum}"
+          ></option>
+        </select>
+        Page Size:
+        <select name="pageSize">
+          <option
+            th:each="size : ${ {5, 10, 15, 20} }"
+            th:value="${size}"
+            th:text="${size}"
+            th:selected="${size == pageSize}"
+          ></option>
+        </select>
+        <button type="submit">Go</button>
+      </form>
+    </div>
+
+    <!-- Prev / Next 버튼 -->
+    <div class="pager">
+      <a th:href="@{/users/view(pageNum=${prevPage}, pageSize=${pageSize})}"
+        >&laquo; Prev</a
+      >
+      <span
+        >Page <span th:text="${pageNum}"></span> /
+        <span th:text="${totalPages}"></span
+      ></span>
+      <a th:href="@{/users/view(pageNum=${nextPage}, pageSize=${pageSize})}"
+        >Next &raquo;</a
+      >
+    </div>
+
+    <!-- ArgumentResolver + PageHelper -->
+    <table>
+      <caption>
+        ArgumentResolver + PageHelper
+      </caption>
+      <thead>
+        <tr>
+          <th>SEQ</th>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>addr1</th>
+          <th>addr2</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="user : ${argPage.list}">
+          <td th:text="${user.seq}"></td>
+          <td th:text="${user.id}"></td>
+          <td th:text="${user.name}"></td>
+          <td th:text="${user.email}"></td>
+          <td th:text="${user.addr1}"></td>
+          <td th:text="${user.addr2}"></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6">Total: <span th:text="${argPage.total}"></span></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- RowBounds -->
+    <table>
+      <caption>
+        RowBounds
+      </caption>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>addr1</th>
+          <th>addr2</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="user : ${rowBoundsMap.list}">
+          <td th:text="${user.id}"></td>
+          <td th:text="${user.name}"></td>
+          <td th:text="${user.email}"></td>
+          <td th:text="${user.addr1}"></td>
+          <td th:text="${user.addr2}"></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6">
+            Total: <span th:text="${rowBoundsMap.total}"></span>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- AOP PageHelper -->
+    <table>
+      <caption>
+        AOP PageHelper
+      </caption>
+      <thead>
+        <tr>
+          <th>SEQ</th>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>addr1</th>
+          <th>addr2</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="user : ${aopPage.list}">
+          <td th:text="${user.seq}"></td>
+          <td th:text="${user.id}"></td>
+          <td th:text="${user.name}"></td>
+          <td th:text="${user.email}"></td>
+          <td th:text="${user.addr1}"></td>
+          <td th:text="${user.addr2}"></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6">Total: <span th:text="${aopPage.total}"></span></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- 페이지 이동 버튼 -->
+    <div class="pager">
+      <a th:href="@{/users/view(pageNum=${prevPage}, pageSize=${pageSize})}"
+        >&laquo; Prev</a
+      >
+      <span>Page <span th:text="${pageNum}"></span></span>
+      <a th:href="@{/users/view(pageNum=${nextPage}, pageSize=${pageSize})}"
+        >Next &raquo;</a
+      >
+    </div>
+  </body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mustache Paging Demo</title>
+
+    <!-- Mustache -->
+    <script src="https://cdn.jsdelivr.net/npm/mustache@4.2.0/mustache.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .loading {
+        text-align: center;
+        font-weight: bold;
+        padding: 10px;
+      }
+      .tables {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      @media (max-width: 900px) {
+        .tables {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Mustache + Infinite Scroll Paging</h1>
+
+    <div class="tables">
+      <table id="argTable">
+        <caption>
+          ArgumentResolver PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <table id="aopTable">
+        <caption>
+          AOP PageHelper
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <table id="rowTable">
+        <caption>
+          RowBounds
+        </caption>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="sentinel" class="loading">Loading...</div>
+
+    <!-- ======================
+          Mustache Template
+      ====================== -->
+    <script id="row-template" type="x-tmpl-mustache">
+      {{#list}}
+      <tr>
+        <td>{{id}}</td>
+        <td>{{name}}</td>
+        <td>{{email}}</td>
+      </tr>
+      {{/list}}
+    </script>
+
+    <script>
+      /* ======================
+        fetch 공통
+      ====================== */
+      let controller = null;
+
+      async function apiGet(url) {
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        const res = await fetch(url, { signal: controller.signal });
+        return res.json();
+      }
+
+      /* ======================
+        상태
+      ====================== */
+      let pageNum = 1;
+      const pageSize = 5;
+      let totalPages = Infinity;
+      let loading = false;
+
+      /* 중복 방지용 */
+      const rendered = {
+        basic: new Set(),
+        aop: new Set(),
+        arg: new Set(),
+        row: new Set(),
+      };
+
+      const template = document.getElementById("row-template").innerHTML;
+
+      /* ======================
+   DOM diff + Mustache
+====================== */
+      function appendRows(tbody, list, cache) {
+        const filtered = list.filter((u) => !cache.has(u.id));
+        filtered.forEach((u) => cache.add(u.id));
+
+        if (filtered.length === 0) return;
+
+        const html = Mustache.render(template, { list: filtered });
+        tbody.insertAdjacentHTML("beforeend", html);
+      }
+
+      /* ======================
+   데이터 로드
+====================== */
+      async function loadNext() {
+        if (loading || pageNum > totalPages) return;
+        loading = true;
+
+        const data = await apiGet(
+          `/users/ajax?pageNum=${pageNum}&pageSize=${pageSize}`
+        );
+
+        appendRows(
+          document.querySelector("#aopTable tbody"),
+          data.aopPage.list,
+          rendered.aop
+        );
+
+        appendRows(
+          document.querySelector("#argTable tbody"),
+          data.argPage.list,
+          rendered.arg
+        );
+
+        appendRows(
+          document.querySelector("#rowTable tbody"),
+          data.rowBoundsMap.list,
+          rendered.row
+        );
+
+        totalPages = data.totalPages;
+        pageNum++;
+        loading = false;
+
+        if (pageNum > totalPages) {
+          document.getElementById("sentinel").textContent =
+            "모든 데이터 로드 완료";
+          observer.disconnect();
+        }
+      }
+
+      /* ======================
+   IntersectionObserver
+====================== */
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) loadNext();
+        },
+        { threshold: 0.1 }
+      );
+
+      observer.observe(document.getElementById("sentinel"));
+
+      /* 초기 로드 */
+      loadNext();
+    </script>
+  </body>
+</html>

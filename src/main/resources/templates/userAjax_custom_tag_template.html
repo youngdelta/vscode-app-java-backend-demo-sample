@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Web Component Paging</title>
+  </head>
+
+  <body>
+    <h1>Web Component Paging Demo</h1>
+
+    <user-table
+      title="ArgumentResolver PageHelper"
+      endpoint="/users/ajax"
+    ></user-table>
+
+    <user-table title="AOP PageHelper" endpoint="/users/ajax"></user-table>
+
+    <user-table title="RowBounds" endpoint="/users/ajax"></user-table>
+
+    <script>
+      /* ============================
+   <user-table> Component
+============================ */
+      class UserTable extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: "open" });
+
+          this.pageNum = 1;
+          this.pageSize = 5;
+          this.totalPages = Infinity;
+          this.loading = false;
+          this.renderedIds = new Set();
+          this.controller = null;
+        }
+
+        connectedCallback() {
+          this.render();
+          this.loadNext();
+          this.initObserver();
+        }
+
+        disconnectedCallback() {
+          this.observer?.disconnect();
+          this.controller?.abort();
+        }
+
+        render() {
+          this.shadowRoot.innerHTML = `
+      <style>
+        table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+        caption { font-weight: bold; margin-bottom: 5px; }
+        .loading { text-align: center; font-weight: bold; padding: 10px; }
+      </style>
+
+      <table>
+        <caption>${this.getAttribute("title") ?? ""}</caption>
+        <thead>
+          <tr><th>ID</th><th>Name</th><th>Email</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="loading" id="sentinel">Loading...</div>
+    `;
+        }
+
+        async fetchData() {
+          if (this.controller) this.controller.abort();
+          this.controller = new AbortController();
+
+          const url = `${this.getAttribute("endpoint")}?pageNum=${
+            this.pageNum
+          }&pageSize=${this.pageSize}`;
+
+          const res = await fetch(url, { signal: this.controller.signal });
+          return res.json();
+        }
+
+        createRow(user) {
+          const tr = document.createElement("tr");
+          ["id", "name", "email"].forEach((k) => {
+            const td = document.createElement("td");
+            td.textContent = user[k] ?? "";
+            tr.appendChild(td);
+          });
+          return tr;
+        }
+
+        appendRows(list) {
+          const tbody = this.shadowRoot.querySelector("tbody");
+          const fragment = document.createDocumentFragment();
+
+          for (const user of list) {
+            if (this.renderedIds.has(user.id)) continue;
+            this.renderedIds.add(user.id);
+            fragment.appendChild(this.createRow(user));
+          }
+
+          tbody.appendChild(fragment);
+        }
+
+        async loadNext() {
+          if (this.loading || this.pageNum > this.totalPages) return;
+
+          this.loading = true;
+
+          const data = await this.fetchData();
+          const page = data.argPage ?? data; // 구조 유연성
+
+          this.appendRows(page.list);
+          this.totalPages = page.pages ?? page.totalPages;
+          this.pageNum++;
+          this.loading = false;
+
+          if (this.pageNum > this.totalPages) {
+            this.shadowRoot.getElementById("sentinel").textContent =
+              "모든 데이터 로드 완료";
+            this.observer.disconnect();
+          }
+        }
+
+        initObserver() {
+          const sentinel = this.shadowRoot.getElementById("sentinel");
+
+          this.observer = new IntersectionObserver(
+            (entries) => {
+              if (entries[0].isIntersecting) this.loadNext();
+            },
+            { threshold: 0.1 }
+          );
+
+          this.observer.observe(sentinel);
+        }
+      }
+
+      customElements.define("user-table", UserTable);
+    </script>
+  </body>
+</html>
