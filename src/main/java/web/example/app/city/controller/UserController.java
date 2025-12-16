@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.ibatis.session.RowBounds;
+import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,7 @@ import web.example.app.city.mapper.UserMapper;
 import web.example.app.config.aop.Pageable;
 import web.example.app.domain.dto.PageRequest;
 import web.example.app.domain.model.User;
+import web.example.app.utils.JasyptEncryptUtil;
 
 @Controller
 @RequestMapping("/users")
@@ -208,6 +210,10 @@ public class UserController {
                             @RequestParam(defaultValue = "5") int pageSize,
                             Map<String, Object> model) {
 
+        test();
+
+        test2();
+
         return "userAjax";
     }
 
@@ -319,6 +325,42 @@ public class UserController {
 
         // return "users-fragment";
     }
+
+
+    public void test() {
+
+        String secretKey = "ThisIsTestSecretKey";
+
+        String targetText = "This Is Target Text!!";
+
+        // Using Jasypt
+        StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+        encryptor.setPassword(secretKey);
+        encryptor.setAlgorithm("PBEWithMD5AndDES"); //Default
+
+        String encryptedText = encryptor.encrypt(targetText);
+        // System.out.println("encryptedText = " + encryptedText);
+        log.info("encryptedText = {}", encryptedText);
+
+        String decryptedText = encryptor.decrypt(encryptedText);
+        // System.out.println("decryptedText = " + decryptedText);
+        log.info("decryptedText = {}", decryptedText);
+
+        
+    } 
+
+    public void test2() {
+    
+        String targetText = "This is a secret message";
+        String encrypt = JasyptEncryptUtil.encrypt(targetText);
+        // System.out.println("encrypt = " + encrypt);
+        log.info("encrypt = {}", encrypt);
+
+        String decrypt = JasyptEncryptUtil.decrypt(encrypt);
+        // System.out.println("decrypt = " + decrypt);
+        log.info("decrypt = {}", decrypt);
+    }
+    
 
 
     

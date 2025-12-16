@@ -2,6 +2,10 @@ package web.example.app.config;
 
 import java.util.List;
 
+import org.jasypt.encryption.StringEncryptor;
+import org.jasypt.encryption.pbe.PooledPBEStringEncryptor;
+import org.jasypt.encryption.pbe.config.SimpleStringPBEConfig;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +13,6 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import web.example.app.config.components.PageRequestResolver;
 import web.example.app.config.interceptor.LoggerInterceptor;
@@ -80,5 +83,29 @@ public class AppConfig implements WebMvcConfigurer {
         
         return registrationBean;
     }
+
+
+	@Value("${jasypt.encryptor.password}")
+    private String encryptKey;
+
+	// @Bean(name="jasyptStringEncryptor")
+	public StringEncryptor stringEncryptor() {
+		// String key = "key";
+		String key = encryptKey;
+		PooledPBEStringEncryptor encryptor = new PooledPBEStringEncryptor();
+		SimpleStringPBEConfig config = new SimpleStringPBEConfig();
+		
+		config.setPassword(key);
+		config.setAlgorithm("PBEWithMD5AndDES");
+		config.setKeyObtentionIterations(1000);
+		config.setPoolSize(1);
+		config.setProviderName("SunJCE");
+		config.setSaltGeneratorClassName("org.jasypt.salt.RandomSaltGenerator");
+		config.setStringOutputType("base64");
+		
+		encryptor.setConfig(config);
+		return encryptor;
+	}
+	// 출처: https://jong-bae.tistory.com/68 [기록하는 프로그래머:티스토리]
 
 }
