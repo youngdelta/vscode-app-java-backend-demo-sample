@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="web.example.app.mapper.CodeMapper">
+
+    <insert id="insertCode" >
+        INSERT INTO code
+        values (#{code}, #{name}, #{divisionCode}, #{message})
+    </insert>
+
+
+    <!--코드 값을 기반으로 코드 정보를 조회합니다-->
+    <select id="selectCodeByCd" resultType="web.example.app.domain.dto.CodeDto">
+        SELECT t1.grp_cd
+            , t1.cd
+            , t1.grp_cd_nm
+            , t1.grp_cd
+            , t1.grp_cd_nm
+            , t1.cd_nm
+            , t1.sort_order
+        FROM multiflex_scma.tb_code t1
+        WHERE t1.cd = #{cd}
+    </select>
+
+</mapper>
