@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Insert title here</title>
+  </head>
+  <body>
+    <form action="/jpaemp/add" method="post">
+      <div>
+        <label for="name">이름</label>
+        <input id="name" type="text" name="name" value="" />
+      </div>
+      <div>
+        <label for="deptno">부서</label>
+        <select id="deptno" name="deptno">
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+        </select>
+      </div>
+      <div>
+        <label>급여</label>
+        <input id="sal" type="number" name="sal" value="" />
+      </div>
+      <div>
+        <label>입사</label>
+        <input id="hiredate" type="date" name="hiredate" value="" />
+      </div>
+      <div class="btn">
+        <button type="reset">취소</button>
+        <button type="submit">추가</button>
+      </div>
+    </form>
+  </body>
+</html>

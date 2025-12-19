@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="web.example.app.mapper">
+ 
+    <insert id="saveBoard"
+       parameterType="web.example.app.domain.BoardVO">
+       <!-- Board.num 에 시퀀스 값을 보관해서 사용할 필요가 있다면 아래처럼...
+      <selectKey keyProperty="num" resultType="integer" order="BEFORE">
+          SELECT BOARD_SEQ.NEXTVAL FROM DUAL
+      </selectKey>
+       -->
+      INSERT INTO board(boardid, title, contents, author)
+      VALUES(BOARD_SEQ.NEXTVAL
+            , #{title       ,jdbcType=VARCHAR}
+            , #{contents    ,jdbcType=VARCHAR}
+            , #{author      ,jdbcType=VARCHAR}
+        )
+ 
+    </insert>
+   
+    
+     <update id="saveAttach" parameterType="list">
+       INSERT INTO attach (attachid,boardid , fname, fsize)
+       SELECT ATTACH_SEQ.NEXTVAL AS attachid, t.* FROM
+       (
+           <foreach collection="list" item="item" index="index" separator="union all">
+           <!-- 유니언 올 때문에 결과값 한행 한행을 하나의 집합으로 만들어준다.-->
+                SELECT (SELECT MAX(boardid) FROM board) AS boardid
+                        , #{item.fname}
+                        , #{item.fsize} 
+                FROM DUAL
+           </foreach>
+       ) t
+   </update>
+
+
+
+   <select id="getList" 
+         resultType="map">
+         SELECT b.boardid
+                , b.title
+                , b.author
+                , LISTAGG(a.attachid||','||a.fname||','||a.fsize,'/')
+                WITHIN GROUP (ORDER BY a.attachid) fnames
+        FROM board b LEFT OUTER JOIN attach a
+            ON b.boardid=a.boardid
+        GROUP BY  b.boardid, b.title, b.author
+        ORDER BY b.boardid DESC
+   </select>
+</mapper>

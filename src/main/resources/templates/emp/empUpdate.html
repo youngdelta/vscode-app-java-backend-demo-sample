@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Insert title here</title>
+  </head>
+  <body>
+    <form action="/jpaemp/edit" method="post">
+      <input type="hidden" name="empno" th:value="${emp.empno}" />
+      <div>
+        <label for="empno">사번</label>
+        <p th:text="${emp.empno}"></p>
+      </div>
+      <div>
+        <label for="name">이름</label>
+        <p th:text="${emp.name}"></p>
+      </div>
+      <div>
+        <label for="deptno">부서</label>
+        <select id="deptno" name="deptno">
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+        </select>
+      </div>
+      <div>
+        <label>급여</label>
+        <input id="sal" type="number" name="sal" value="" />
+      </div>
+      <div>
+        <label>입사일</label>
+        <p th:text="${emp.hiredate}"></p>
+      </div>
+      <div class="btn">
+        <button type="reset">취소</button>
+        <button type="submit">수정</button>
+      </div>
+    </form>
+  </body>
+</html>

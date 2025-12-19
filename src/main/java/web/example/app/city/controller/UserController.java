@@ -25,9 +25,9 @@ import web.example.app.domain.dto.PageRequest;
 import web.example.app.domain.model.User;
 import web.example.app.utils.JasyptEncryptUtil;
 
-@Controller
-@RequestMapping("/users")
 @Log4j2
+@RequestMapping("/users")
+@Controller
 public class UserController {
 
      private final UserMapper userMapper;

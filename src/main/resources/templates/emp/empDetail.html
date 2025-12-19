@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Insert title here</title>
+  </head>
+  <body>
+    <p
+      th:text="${emp.empno} +'/'+ ${emp.name}+'/'+ ${emp.deptno}+'/'+ ${emp.sal}+'/'+ ${emp.hiredate}"
+    ></p>
+    <a th:href="@{'/jpaemp/update/'+${emp.empno}}">사원정보수정</a>
+    <a th:href="@{'/jpaemp/delete/'+${emp.empno}}">사원정보삭제</a>
+  </body>
+</html>

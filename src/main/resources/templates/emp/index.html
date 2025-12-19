@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>연습장</title>
+</head>
+<body>
+<h3>안녕하세요</h3>
+ 
+<!-- Variable Expression -->
+<div th:text="${greeting}"></div>
+<div>[[${greeting}]]</div>
+<p>
+<a href="/th/">index.html</a>
+<p>
+ 
+<!-- URL Expression -->
+<a th:href="@{'/' + ${url} }">index.html</a>
+<p>
+<a th:href="${'/' + url }">index.html</a>
+<p>
+<input type="text" value="1+2">
+<p>
+<input type="text" th:value="1+2"> <!-- 3표시됨 -->
+<p>
+<div th:text="${msg}"></div>
+<p>
+<div th:text="${success} ? '성공' : '실패'" ></div>
+<div th:text="${success ? 'true':'false'}" ></div>
+ 
+<p>
+<div th:if="${gender=='M'}" >남자</div>
+<div th:unless="${gender=='M'}" >여자</div><!-- 표시 안됨 -->
+<p>
+<!-- switch case -->
+<div th:switch="${gender}">
+    <span th:case="M">Male</span>
+    <span th:case="F">Female</span>
+    <span th:case="*">Others</span>
+</div>
+<!-- 리스트 사이즈 -->
+<div th:text="'배열 원소수:' + ${nums.length} + '개'"></div>
+<div th:text="${nums[0]}"></div><!-- 배열의 원소 출력 -->
+ 
+<div th:text="'리스트 원소수:' + ${#lists.size(scores)} + '개'"></div>
+<!-- 반복문 -->
+<div>
+   <span th:each="n : ${nums}">
+      [[${n}]]
+   </span>
+</div>
+<div> <!-- 상태변수: index, count, size, even/odd, first, last -->
+   <span th:each="name, iStat : ${names}">
+      [[${iStat.index}]].[[${name}]]
+   </span>
+</div>
+<!-- Map 다루기 -->
+<p th:each="user :${credit}">
+    <span th:text="${user.key}"></span>
+    <span th:text="${user.value}"></span>
+</p>
+ 
+<!-- 영역 오브젝트 -->
+<p th:text="${param.q}">Test</p> <!--요청 파라미터 localhost/th/메소드getmapping주소명?q=여기에 값이와야함-->
+<p th:text="'이용자 아이디:' + ${session.userid}">
+ 
+<!-- 객체의 속성 -->
+<p th:text="${emp.empno} +'/'+ ${emp.ename}">
+</main>
+</body>
+</html>

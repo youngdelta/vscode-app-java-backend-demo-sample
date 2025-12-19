@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="web.example.app.mapper.CRUDMapper">
+
+     <select id="search" 
+       resultType="web.example.app.domain.entity.Emp"
+       parameterType="map">
+        SELECT * FROM emp2 
+        <!--WHERE deptno =#{deptno} AND ename=#{ename}-->
+        <where>
+            <if test="deptno!=''">AND deptno =#{deptno}</if>
+            <if test="ename!=''">AND ename =#{ename}</if>
+        </where>
+    </select>
+</mapper>
