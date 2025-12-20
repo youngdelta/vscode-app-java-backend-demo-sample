@@ -83,14 +83,18 @@
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa -->
-		<!-- 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 			<version>4.0.0</version>
 		</dependency> 
-		 -->
-		 
+
+		 <dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
 		<!-- JSP페이지에서 사용한 JSTL을 위한 라이브러리입니다. -->
 		<dependency>
 		    <groupId>javax.servlet</groupId>

@@ -15,19 +15,19 @@ import lombok.ToString;
  
 @Data
 @ToString
-// @Entity
+@Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-// @Table(name="emp4")
+@Table(name="emp4")
 public class Emp 
 {
-    // @Id
-    // @SequenceGenerator(sequenceName = "EMP4_EMPNO_SEQ", allocationSize =1, name="EMP4_EMPNO_GEN" )
-    // @GeneratedValue(strategy = GenerationType.SEQUENCE, generator="EMP4_EMPNO_GEN")
+    @Id
+    @SequenceGenerator(sequenceName = "EMP4_EMPNO_SEQ", allocationSize =1, name="EMP4_EMPNO_GEN" )
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator="EMP4_EMPNO_GEN")
     private int empno;
     
-    // @Column(name="ename")
+    @Column(name="ename")
     private String name;
     
     private int deptno;
