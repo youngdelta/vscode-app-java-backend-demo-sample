@@ -36,7 +36,7 @@ public class UserController {
         this.userMapper = userMapper;
     }
 
-    @Pageable(defaultPageNum = 1, defaultPageSize = 5)
+    @Pageable(defaultPageNum = 1, defaultPageSize = 5, getPageNumber = 0, getPageSize = 0)
     @GetMapping("/user1")
     @ResponseBody
     public List<User> getUsers(@RequestParam Map<String, Object> params) {
